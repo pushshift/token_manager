@@ -83,16 +83,6 @@ class TokenManager:
 
             time.sleep(1)
 
-    def get_access_obj(self,access_objs,url):
-
-        while True:
-            for obj in access_objs:
-                if obj['rate_limit_remaining'][url] > 0 or obj['rate_limit_reset'][url] < int(time.time()):
-                    return obj
-
-        time.sleep(1)
-        #return access_objs[self.url_counter['url'] % len(self.access_objs)]
-
     def make_request(self,url,params,headers=None,type='get',user_auth=None):
         '''Make request to Twitter API'''
         retries = self.MAX_RETRIES
