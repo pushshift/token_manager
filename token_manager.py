@@ -61,13 +61,14 @@ class TokenManager:
 
             for key in keys:
                 if endpoint not in key['endpoint']:
-                    key['endpoint'][endpoint] = defaultdict(dict)
-                    key['endpoint'][endpoint]['rate-limit-reset'] = None
-                    key['endpoint'][endpoint]['rate-limit-remaining'] = None
+                    key['endpoint'][endpoint] = k_endpoint = defaultdict(dict)
+                    k_endpoint['rate-limit-reset'] = None
+                    k_endpoint['rate-limit-remaining'] = None
                 elif key['endpoint'][endpoint]['rate-limit-reset'] is not None:
-                    if key['endpoint'][endpoint]['rate-limit-reset'] < int(time.time() - 1):
-                        key['endpoint'][endpoint]['rate-limit-remaining'] = None
-                        key['endpoint'][endpoint]['rate-limit-reset'] = None
+                    k_endpoint = key['endpoint'][endpoint]
+                    if k_endpoint['rate-limit-reset'] < int(time.time() - 1):
+                        k_endpoint['rate-limit-remaining'] = None
+                        k_endpoint['rate-limit-reset'] = None
 
             # Find a key with available calls for the requested endpoint
             for key in keys:
