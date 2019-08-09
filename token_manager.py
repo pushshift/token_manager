@@ -70,8 +70,8 @@ class TokenManager:
                         key['endpoint'][endpoint]['rate-limit-reset'] = None
 
             # Find a key with available calls for the requested endpoint
-            endpoint = key['endpoint'][endpoint]
             for key in keys:
+                endpoint = key['endpoint'][endpoint]
                 if endpoint['rate-limit-remaining'] is None or endpoint['rate-limit-remaining'] > 0:
                     if endpoint['rate-limit-remaining'] is not None:
                         self.i_lock.acquire()
