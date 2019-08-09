@@ -12,7 +12,7 @@ logging.getLogger("urllib3").propagate = False
 logging.getLogger("requests").propagate = False
 logging.getLogger("requests_oauthlib.oauth1_auth").propagate = False
 logging.getLogger("oauthlib").propagate = False
-logging.basicConfig(level=logging.DEBUG,format='%(asctime)s %(levelname)s %(message)s')
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
 
 
 class TokenManager:
@@ -28,7 +28,7 @@ class TokenManager:
         self.i_lock = threading.Lock()
         self.randomize_keys = True
 
-    def load_keys(self,filename):
+    def load_keys(self, filename):
         '''Load user key data from a key file. The key file is an ndjson file where each JSON
         object contains the following fields:
 
@@ -37,7 +37,7 @@ class TokenManager:
             access_token_secret:    The access token secret
         '''
 
-        keys_file = open(filename,"r")
+        keys_file = open(filename, "r")
         with keys_file as f:
             key_data = [line for line in f.read().splitlines() if line != '']
             for obj in key_data:
@@ -46,7 +46,7 @@ class TokenManager:
                 self.keys[screen_name] = auth_key
                 self.keys[screen_name]['endpoint'] = defaultdict(dict)
 
-    def fetch_key(self,endpoint):
+    def fetch_key(self, endpoint):
         '''This method returns a key that has available capacity (rate-limit). If no keys have
         any available calls left, this function will wait (sleep) until more calls are available
         once a new rate-limit window goes into effect.
@@ -64,18 +64,20 @@ class TokenManager:
                     key['endpoint'][endpoint] = defaultdict(dict)
                     key['endpoint'][endpoint]['rate-limit-reset'] = None
                     key['endpoint'][endpoint]['rate-limit-remaining'] = None
-                elif key['endpoint'][endpoint]['rate-limit-reset'] is not None and key['endpoint'][endpoint]['rate-limit-reset'] < int(time.time() - 1):
-                    key['endpoint'][endpoint]['rate-limit-remaining'] = None
-                    key['endpoint'][endpoint]['rate-limit-reset'] = None
+                elif key['endpoint'][endpoint]['rate-limit-reset'] is not None:
+                    if key['endpoint'][endpoint]['rate-limit-reset'] < int(time.time() - 1):
+                        key['endpoint'][endpoint]['rate-limit-remaining'] = None
+                        key['endpoint'][endpoint]['rate-limit-reset'] = None
 
             # Find a key with available calls for the requested endpoint
+            endpoint = key['endpoint'][endpoint]
             for key in keys:
-                if key['endpoint'][endpoint]['rate-limit-remaining'] is None or key['endpoint'][endpoint]['rate-limit-remaining'] > 0:
-                    if key['endpoint'][endpoint]['rate-limit-remaining'] is not None:
+                if endpoint['rate-limit-remaining'] is None or endpoint['rate-limit-remaining'] > 0:
+                    if endpoint['rate-limit-remaining'] is not None:
                         self.i_lock.acquire()
-                        key['endpoint'][endpoint]['rate-limit-remaining'] -= 1
+                        endpoint['rate-limit-remaining'] -= 1
                         self.i_lock.release()
-                    logging.debug("Using auth key {} for endpoint {}.".format(key['screen_name'],endpoint))
+                    logging.debug("Using auth key {} for endpoint {}.".format(key['screen_name'], endpoint))
                     return key
 
             # If we get here, there were no keys available to fulfill the request so we'll sleep and try again
@@ -83,18 +85,21 @@ class TokenManager:
 
             time.sleep(1)
 
-    def make_request(self,url,params,headers=None,type='get',user_auth=None):
+    def make_request(self, url, params, headers=None, type='get', user_auth=None):
         '''Make request to Twitter API'''
         retries = self.MAX_RETRIES
 
         while retries:
             auth_key = self.fetch_key(url)
             logging.info("Using authorization key: {}".format(auth_key['screen_name']))
-            auth = OAuth1(self.consumer_key, self.consumer_secret, auth_key['access_token'], auth_key['access_token_secret'])
+            auth = OAuth1(self.consumer_key,
+                          self.consumer_secret,
+                          auth_key['access_token'],
+                          auth_key['access_token_secret'])
             if type == 'get':
-                r = requests.get(url,params=params,headers=headers,auth=auth)
+                r = requests.get(url, params=params, headers=headers, auth=auth)
             elif type == 'post':
-                r = requests.post(url,params=params,headers=headers,auth=auth)
+                r = requests.post(url, params=params, headers=headers, auth=auth)
             status_code = r.status_code
             response_headers = r.headers
             try:
@@ -102,12 +107,12 @@ class TokenManager:
                 rate_limit_reset = int(response_headers['x-rate-limit-reset'])
                 self.keys[auth_key['screen_name']]['endpoint'][url]['rate-limit-remaining'] = rate_limit_remaining
                 self.keys[auth_key['screen_name']]['endpoint'][url]['rate-limit-reset'] = rate_limit_reset
-            except:
+            except Exception:
                 pass
             if status_code == 200:
                 return r.json()
             elif status_code == 429:
-                logging.warning("Rate limit reached for {}. Trying with a different key.".format(auth_key['screen_name']))
+                logging.warning("Rate limit reached for {}.".format(auth_key['screen_name']))
             elif status_code == 401:
                 return False
             elif status_code == 404:
@@ -124,16 +129,12 @@ def statuses_lookup(tm, **kwargs):
     params = defaultdict(dict)
     params['tweet_mode'] = 'extended'
     params.update(kwargs)
-    data = tm.make_request(endpoint,kwargs)
+    data = tm.make_request(endpoint, kwargs)
     return data
-
-
 
 
 # Example Usage
 tm = TokenManager()
 tm.load_keys("twitter_access_tokens.ndjson")
-data = statuses_lookup(tm,id=[20,21,22,23,24,25,26,27,28,29,30])
+data = statuses_lookup(tm, id=[20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30])
 print(data)
-
-
