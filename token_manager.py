@@ -71,11 +71,11 @@ class TokenManager:
 
             # Find a key with available calls for the requested endpoint
             for key in keys:
-                endpoint = key['endpoint'][endpoint]
-                if endpoint['rate-limit-remaining'] is None or endpoint['rate-limit-remaining'] > 0:
-                    if endpoint['rate-limit-remaining'] is not None:
+                k_endpoint = key['endpoint'][endpoint]
+                if k_endpoint['rate-limit-remaining'] is None or k_endpoint['rate-limit-remaining'] > 0:
+                    if k_endpoint['rate-limit-remaining'] is not None:
                         self.i_lock.acquire()
-                        endpoint['rate-limit-remaining'] -= 1
+                        k_endpoint['rate-limit-remaining'] -= 1
                         self.i_lock.release()
                     logging.debug("Using auth key {} for endpoint {}.".format(key['screen_name'], endpoint))
                     return key
